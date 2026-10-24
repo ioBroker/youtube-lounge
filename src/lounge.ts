@@ -5,8 +5,9 @@ import { type YouTubeTarget, uploadsPlaylistId } from './target.js';
 
 const API = 'https://www.youtube.com/api/lounge';
 const TIMEOUT = 10_000;
-/** Pause before the long poll starts again after an error, in ms */
+/** Pause before the long poll starts again after an error: 5 s, doubled per failure, at most 5 min */
 const RETRY_DELAY = 5_000;
+const RETRY_DELAY_MAX = 300_000;
 
 /** The YouTube app of a TV as the lounge knows it; store it to reconnect without pairing again */
 export interface LoungeScreen {
@@ -201,6 +202,11 @@ export class YouTubeLounge extends EventEmitter {
         return this.command('seekTo', { newTime: Math.max(0, Math.round(seconds)) });
     }
 
+    /** Mute or unmute the YouTube player */
+    setMuted(muted: boolean): Promise<void> {
+        return this.command(muted ? 'mute' : 'unMute');
+    }
+
     /** Set the volume 0-100 of the YouTube player */
     setVolume(volume: number): Promise<void> {
         return this.command('setVolume', { volume: Math.min(100, Math.max(0, Math.round(volume))) });
@@ -222,6 +228,7 @@ export class YouTubeLounge extends EventEmitter {
     }
 
     private async poll(signal: AbortSignal): Promise<void> {
+        let failures = 0;
         while (!signal.aborted) {
             try {
                 if (!this.connected) {
@@ -243,6 +250,7 @@ export class YouTubeLounge extends EventEmitter {
                 if (res.status !== 200 || !res.body) {
                     throw new Error(`YouTube: long poll failed (HTTP ${res.status})`);
                 }
+                failures = 0;
                 const parser = new ChunkParser();
                 const reader = res.body.getReader();
                 for (;;) {
@@ -260,7 +268,10 @@ export class YouTubeLounge extends EventEmitter {
                 if (this.listenerCount('error')) {
                     this.emit('error', e instanceof Error ? e : new Error(String(e)));
                 }
-                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                failures++;
+                await new Promise(resolve =>
+                    setTimeout(resolve, Math.min(RETRY_DELAY_MAX, RETRY_DELAY * 2 ** (failures - 1))),
+                );
             }
         }
     }
