@@ -49,6 +49,10 @@ lounge.close();
 
 An expired lounge token is renewed with the screen ID, an ended session is opened again, both on their own.
 
+Google accepts commands also while the YouTube app of the TV is not open, and they get lost. Right after the TV or
+the app was started, wait for it: `await lounge.waitForScreen(30000)` (`true` once the app is there);
+`lounge.screenOnline` and the event `screen` tell it later on.
+
 <!--
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
@@ -57,6 +61,10 @@ An expired lounge token is renewed with the screen ID, an ended session is opene
 ## Changelog
 
 ### **WORK IN PROGRESS**
+
+- (@GermanBluefox) Added `waitForScreen()`, `screenOnline` and the event `screen`: commands sent before the YouTube app joined got lost
+
+### 0.1.0 (2026-10-24)
 
 - (@GermanBluefox) Initial release, taken from the adapter `samsungtv`
 

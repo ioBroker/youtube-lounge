@@ -109,6 +109,51 @@ describe('YouTubeLounge', () => {
         });
     });
 
+    it('knows whether the YouTube app is in the lounge', async () => {
+        const status = devices => chunk(JSON.stringify([[2, ['loungeStatus', { devices: JSON.stringify(devices) }]]]));
+        let answer = SESSION + status([{ type: 'REMOTE_CONTROL', name: 'ioBroker' }]);
+        const { fn } = fakeFetch(() => new Response(answer));
+        const lounge = new YouTubeLounge({ fetch: fn, api: 'https://lounge.test/api' });
+        lounge.useScreen({ screenId: 's-1', loungeToken: 't-1' });
+        await lounge.connect();
+        assert.equal(lounge.screenOnline, false);
+        answer = SESSION + status([{ type: 'LOUNGE_SCREEN', name: 'Frame' }]);
+        lounge.useScreen({ screenId: 's-1', loungeToken: 't-1' });
+        await lounge.connect();
+        assert.equal(lounge.screenOnline, true);
+    });
+
+    it('waits until the YouTube app joins the lounge', async () => {
+        let polls = 0;
+        // a long poll that answers at once would never let the timers run
+        const later = () => new Promise(resolve => setTimeout(resolve, 5));
+        const { fn } = fakeFetch(async request => {
+            if (request.method === 'POST') {
+                return new Response(SESSION);
+            }
+            await later();
+            // the app joins with the second long poll
+            polls++;
+            const events = polls === 2 ? chunk('[[3,["nowPlaying",{"videoId":"jNQXAC9IVRw","state":"1"}]]]') : '';
+            return new Response(events);
+        });
+        const lounge = new YouTubeLounge({ fetch: fn, api: 'https://lounge.test/api' });
+        lounge.useScreen({ screenId: 's-1', loungeToken: 't-1' });
+        assert.equal(await lounge.waitForScreen(1000), true);
+        lounge.close();
+
+        const empty = fakeFetch(async request => {
+            if (request.method !== 'POST') {
+                await later();
+            }
+            return new Response(request.method === 'POST' ? SESSION : '');
+        });
+        const alone = new YouTubeLounge({ fetch: empty.fn, api: 'https://lounge.test/api' });
+        alone.useScreen({ screenId: 's-1', loungeToken: 't-1' });
+        assert.equal(await alone.waitForScreen(50), false);
+        alone.close();
+    });
+
     it('follows the TV over the long poll until closed', async () => {
         const { fn } = fakeFetch(request => {
             if (request.method === 'POST') {

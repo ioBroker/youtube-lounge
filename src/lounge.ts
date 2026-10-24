@@ -57,8 +57,8 @@ type Params = Record<string, string | number | undefined>;
  * requests go to Google's servers; the protocol follows pyytlounge (FabioGNR/pyytlounge). Google does not document
  * it, so it may change.
  *
- * Events: `nowPlaying` (NowPlaying | null), `volume` ({ volume, muted }), `disconnected` (the TV left the
- * lounge), `error` (Error of the long poll).
+ * Events: `nowPlaying` (NowPlaying | null), `volume` ({ volume, muted }), `screen` (boolean: the YouTube app of
+ * the TV joined or left the lounge), `disconnected` (the TV left the lounge), `error` (Error of the long poll).
  */
 export class YouTubeLounge extends EventEmitter {
     private screenInfo: LoungeScreen | null = null;
@@ -73,6 +73,7 @@ export class YouTubeLounge extends EventEmitter {
     private readonly fetchFn: typeof fetch;
     private readonly api: string;
     private current: NowPlaying | null = null;
+    private screenUp = false;
 
     constructor(options: LoungeOptions = {}) {
         super();
@@ -89,6 +90,11 @@ export class YouTubeLounge extends EventEmitter {
 
     get connected(): boolean {
         return !!(this.sid && this.gsessionid);
+    }
+
+    /** Whether the YouTube app of the TV is in the lounge; Google accepts commands without it, but they get lost */
+    get screenOnline(): boolean {
+        return this.screenUp;
     }
 
     /** What the TV plays, as last reported */
@@ -171,6 +177,39 @@ export class YouTubeLounge extends EventEmitter {
         if (result.status !== 200) {
             throw new Error(`YouTube: command ${name} failed (HTTP ${result.status})`);
         }
+    }
+
+    /**
+     * Wait until the YouTube app of the TV is in the lounge, e.g. after the TV or the app was started. Starts the
+     * long poll if it does not run (`close()` ends it).
+     *
+     * @param timeout in ms
+     * @returns whether the app is there
+     */
+    async waitForScreen(timeout = 30_000): Promise<boolean> {
+        if (!this.connected) {
+            // the answer names the devices in the lounge
+            await this.connect();
+        }
+        if (this.screenUp) {
+            return true;
+        }
+        this.subscribe();
+        return new Promise(resolve => {
+            const wait: { timer?: NodeJS.Timeout } = {};
+            const onScreen = (online: boolean): void => {
+                if (online) {
+                    clearTimeout(wait.timer);
+                    this.off('screen', onScreen);
+                    resolve(true);
+                }
+            };
+            wait.timer = setTimeout(() => {
+                this.off('screen', onScreen);
+                resolve(false);
+            }, timeout);
+            this.on('screen', onScreen);
+        });
     }
 
     /** Play a target of `parseYouTubeTarget`; the TV starts the YouTube app if it can */
@@ -331,21 +370,35 @@ export class YouTubeLounge extends EventEmitter {
                     this.gsessionid = String(args[0]);
                     break;
                 case 'nowPlaying':
+                    // only the screen reports what plays
+                    this.setScreen(true);
                     this.update(data, true);
                     break;
                 case 'onStateChange':
+                    this.setScreen(true);
                     this.update(data, false);
+                    break;
+                case 'loungeStatus':
+                    this.setScreen(hasScreen(data.devices));
                     break;
                 case 'onVolumeChanged':
                     this.emit('volume', { volume: Number(data.volume), muted: data.muted === 'true' });
                     break;
                 case 'loungeScreenDisconnected':
                     this.sid = this.gsessionid = '';
+                    this.setScreen(false);
                     this.emit('disconnected');
                     break;
                 default:
                     break;
             }
+        }
+    }
+
+    private setScreen(online: boolean): void {
+        if (online !== this.screenUp) {
+            this.screenUp = online;
+            this.emit('screen', online);
         }
     }
 
@@ -389,5 +442,15 @@ export class YouTubeLounge extends EventEmitter {
             signal: AbortSignal.timeout(TIMEOUT),
         });
         return { status: res.status, text: await res.text() };
+    }
+}
+
+/** `devices` of `loungeStatus` is a JSON string; the YouTube app of the TV is the `LOUNGE_SCREEN` */
+function hasScreen(devices: unknown): boolean {
+    try {
+        const list = JSON.parse(String(devices)) as { type?: string }[];
+        return Array.isArray(list) && list.some(device => device.type === 'LOUNGE_SCREEN');
+    } catch {
+        return false;
     }
 }
