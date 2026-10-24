@@ -1,61 +1,61 @@
 {
-    "name": "@iobroker/youtube-lounge",
-    "version": "0.1.0",
-    "description": "Control the YouTube app of a TV over the YouTube Lounge API (\"Link with TV\"): play videos, playlists and channels, follow what plays",
-    "author": {
-        "name": "bluefox",
-        "email": "dogafox@gmail.com"
+  "name": "@iobroker/youtube-lounge",
+  "version": "0.2.0",
+  "description": "Control the YouTube app of a TV over the YouTube Lounge API (\"Link with TV\"): play videos, playlists and channels, follow what plays",
+  "author": {
+    "name": "bluefox",
+    "email": "dogafox@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ioBroker/youtube-lounge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ioBroker/youtube-lounge.git"
+  },
+  "keywords": [
+    "youtube",
+    "lounge",
+    "dial",
+    "tv",
+    "remote",
+    "iobroker"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./build/esm/index.d.ts",
+        "default": "./build/esm/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.ts",
+        "default": "./build/index.js"
+      }
     },
-    "license": "MIT",
-    "homepage": "https://github.com/ioBroker/youtube-lounge",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/ioBroker/youtube-lounge.git"
-    },
-    "keywords": [
-        "youtube",
-        "lounge",
-        "dial",
-        "tv",
-        "remote",
-        "iobroker"
-    ],
-    "engines": {
-        "node": ">=20"
-    },
-    "main": "build/index.js",
-    "types": "build/index.d.ts",
-    "exports": {
-        ".": {
-            "import": {
-                "types": "./build/esm/index.d.ts",
-                "default": "./build/esm/index.js"
-            },
-            "require": {
-                "types": "./build/index.d.ts",
-                "default": "./build/index.js"
-            }
-        },
-        "./package.json": "./package.json"
-    },
-    "files": [
-        "LICENSE",
-        "build/"
-    ],
-    "scripts": {
-        "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.esm.json && node lib/markEsm",
-        "check": "tsc -p tsconfig.json",
-        "lint": "eslint -c eslint.config.mjs",
-        "test": "mocha --exit",
-        "release": "release-script --noPush -y"
-    },
-    "devDependencies": {
-        "@alcalzone/release-script": "^5.2.1",
-        "@alcalzone/release-script-plugin-license": "^5.2.2",
-        "@iobroker/eslint-config": "^2.3.4",
-        "@types/node": "^22.20.5",
-        "globals": "^17.13.0",
-        "mocha": "^12.0.3",
-        "typescript": "~5.9.3"
-    }
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "LICENSE",
+    "build/"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.esm.json && node lib/markEsm",
+    "check": "tsc -p tsconfig.json",
+    "lint": "eslint -c eslint.config.mjs",
+    "test": "mocha --exit",
+    "release": "release-script --noPush -y"
+  },
+  "devDependencies": {
+    "@alcalzone/release-script": "^5.2.1",
+    "@alcalzone/release-script-plugin-license": "^5.2.2",
+    "@iobroker/eslint-config": "^2.3.4",
+    "@types/node": "^22.20.5",
+    "globals": "^17.13.0",
+    "mocha": "^12.0.3",
+    "typescript": "~5.9.3"
+  }
 }

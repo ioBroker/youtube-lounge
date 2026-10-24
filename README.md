@@ -59,8 +59,7 @@ the app was started, wait for it: `await lounge.waitForScreen(30000)` (`true` on
 -->
 
 ## Changelog
-
-### **WORK IN PROGRESS**
+### 0.2.0 (2026-10-24)
 
 - (@GermanBluefox) Added `waitForScreen()`, `screenOnline` and the event `screen`: commands sent before the YouTube app joined got lost
 
